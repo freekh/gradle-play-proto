@@ -1,0 +1,25 @@
+apply plugin:'scala'
+
+
+repositories {
+  mavenCentral()
+  ivy {
+    url "http://repo.typesafe.com/typesafe/releases/"
+    layout "maven"
+  }
+}
+
+
+
+dependencies {
+  compile 'org.scala-lang:scala-library:2.10.4'
+  compile group: 'com.typesafe.play', name: 'play_2.10', version: '2.3.2'
+  compile group: 'com.typesafe.play', name: 'routes-compiler_2.10', version: '2.3.2'
+  compile group: 'com.typesafe.play', name: 'twirl-compiler_2.10', version: '1.0.2'
+  compile group: 'com.typesafe.play', name: 'twirl-api_2.10', version: '1.0.2'
+}
+
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.useAnt = false
+}
+

@@ -1,4 +1,5 @@
 apply plugin: 'scala'
+apply plugin:'application'
 
 import org.gradle.api.tasks.scala.ScalaCompile
 
@@ -10,10 +11,39 @@ repositories {
   }
 }
 
+sourceSets {
+  main {
+    scala {
+      srcDirs = ["app"]
+    }
+  }
+}
 
-
-dependencies {
+dependencies { //TODO: clean up
   compile 'org.scala-lang:scala-library:2.10.4'
+  runtime "io.netty:netty:3.9.2.Final"
+  runtime "com.typesafe.netty:netty-http-pipelining:1.1.2"
+  runtime "org.slf4j:slf4j-api:1.7.6"
+  runtime "org.slf4j:jul-to-slf4j:1.7.6"
+  runtime "org.slf4j:jcl-over-slf4j:1.7.6"
+  runtime "ch.qos.logback:logback-core:1.1.1"
+  runtime "ch.qos.logback:logback-classic:1.1.1"
+  runtime "com.typesafe.akka:akka-actor_2.10:2.3.3"
+  runtime "com.typesafe.akka:akka-slf4j_2.10:2.3.3"
+  runtime "org.scala-stm:scala-stm_2.10:0.7"
+  runtime "commons-codec:commons-codec:1.9"
+  runtime "joda-time:joda-time:2.3"
+  runtime "org.joda:joda-convert:1.6"
+  runtime "org.apache.commons:commons-lang3:3.1"
+  runtime "com.fasterxml.jackson.core:jackson-core:2.3.2"
+  runtime "com.fasterxml.jackson.core:jackson-annotations:2.3.2"
+  runtime "com.fasterxml.jackson.core:jackson-databind:2.3.2"
+  runtime "xerces:xercesImpl:2.11.0"
+  runtime "javax.transaction:jta:1.1"
+  runtime "org.scala-lang:scala-reflect:2.10.4"
+
+  runtime group: 'com.typesafe.play', name: 'build-link', version: '2.3.2'
+  runtime group: 'com.typesafe.play', name: 'play-exceptions', version: '2.3.2'
   compile group: 'com.typesafe.play', name: 'play_2.10', version: '2.3.2'
   compile group: 'com.typesafe.play', name: 'routes-compiler_2.10', version: '2.3.2'
   compile 'com.fasterxml.jackson.core:jackson-databind:2.3.2'
@@ -50,73 +80,38 @@ tasks.withType(ScalaCompile) {
 }
 
 
-//def playScalaCompile = project.tasks.create('playScalaCompile', ScalaCompile)
-//playScalaCompile.classpath = tasks.compileScala.classpath
-//playScalaCompile.destinationDir = tasks.compileScala.destinationDir
-
-//
 task playGenerateTemplates {
   File outputDir = new File("managed-src") //TODO:properties
-
-  //TODO: somewhere else:
-  tasks.compileScala.source = ["./app/controllers/Application.java", "./managed-src/routes_reverseRouting.scala", "./managed-src/routes_routing.scala", "./managed-src/controllers/routes.java", "./managed-src/views/html/index.template.scala", "./managed-src/views/html/main.template.scala"]
   
-  println tasks.compileScala.getSource().files
-  //  tasks.compileScala.excludes = "*.html"
+  //TODO: somewhere else:
+  tasks.compileScala.source = tasks.compileScala.getSource() + fileTree("./managed-src/views") //TODO: use generated sources instead
 
-  //  sourceSets.main.scala.srcDirs += outputDir.getPath()
-  //  sourceSets.main.java.srcDirs += outputDir.getPath()
   String additionalImports = "import controllers._"
   String basePath = (new File(".")).getCanonicalPath()
   for (templateFile in fileTree("./app/views/").files) { //TODO: {html,js,text,...}.scala name filter
     File relativeFile = new File("./" + templateFile.getAbsolutePath().replace(basePath, "") + "/")
     compy.TwirlCompiler twirlCompiler = new compy.TwirlCompiler(relativeFile, new File("./app/"), outputDir, "play.twirl.api.HtmlFormat", additionalImports, "utf-8", false, false)
-    println twirlCompiler.execute()
+    twirlCompiler.execute()
   }
-  //scala.Option<File> f = compy.execute()
-  //scalaCompile.source = files('supadupa/html/index.template.scala')
-  //  println "->${f}"
   sourceSets.main.scala.srcDirs += outputDir.getPath()
 }
-
-//
-
-//def playJavaCompile = project.tasks.create('playJavaCompile', JavaCompile)
-//playJavaCompile.classpath = tasks.compileJava.classpath
-//playJavaCompile.destinationDir = tasks.compileJava.destinationDir
-
 
 
 task playRoutes { //TODO rename?
   File outputDir = new File("managed-src")
   String basePath = (new File(".")).getCanonicalPath()
-  tasks.compileScala.source = ["./app/controllers/Application.java", "./managed-src/routes_reverseRouting.scala", "./managed-src/routes_routing.scala", "./managed-src/controllers/routes.java", "./managed-src/views/html/index.template.scala", "./managed-src/views/html/main.template.scala"]
-
-  //tasks.compileScala.source = [file("app"), outputDir]
-  //tasks.compileScala.includes = ["*.scala", "*.java"]
-  //tasks.compileScala.exclude("*.html")
-
-  //sourceSets.main.scala.srcDirs += outputDir.getPath()
-  //sourceSets.main.java.srcDirs += outputDir.getPath()
+  tasks.compileScala.source =  tasks.compileScala.getSource() + fileTree("./managed-src/") //TODO: get from output instead
   java.util.List<String> additionalImports = new java.util.ArrayList<String>()
-  //  (file: File, generatedDir: File, additionalImports: Seq[String], generateReverseRouter: Boolean = true, generateRefReverseRouter: Boolean = true, namespaceReverseRouter: Boolean = false)
   compy.RoutesCompiler routesCompiler = new compy.RoutesCompiler(file("conf/routes"), outputDir, additionalImports, true, true, true)
+
   routesCompiler.execute()
 }
-
-//playJavaCompile.source = files('routes-managed-src')
-
-  //  playScalaCompile.scalaCompileOptions.incrementalOptions.analysisFile = tasks.compileScala.scalaCompileOptions.incrementalOptions.analysisFile
-
-
-//HELP!
-//playScalaCompile.dependsOn(playRoutes)
-//playScalaCompile.dependsOn(playGenerateTemplates)
 
 project.gradle.projectsEvaluated { //why? (docs say we should do this?)
   tasks.compileScala.dependsOn(playRoutes)
   tasks.compileScala.dependsOn(playGenerateTemplates)
 }
 
-//Fails on circular dep, but we must do this because java depends on scala, but routes, views generate scala and java depends on this. Potential solution: create a seperate routes/views scala and java, since there are Java files as well, compilers for playRoutes/playGenerateTemplates?
+mainClassName = "play.core.server.NettyServer"
 
+//TODO: start in debug mode
