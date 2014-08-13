@@ -1,53 +1,122 @@
-apply plugin: 'java'
+apply plugin: 'scala'
 
+import org.gradle.api.tasks.scala.ScalaCompile
 
-sourceSets {
-    main {
-        java {
-            srcDir 'app'
-        }
-        resources {
-            srcDir 'conf'
-        }
-    }
+repositories {
+  mavenCentral()
+  ivy {
+    url "http://repo.typesafe.com/typesafe/releases/"
+    layout "maven"
+  }
 }
 
-apply plugin: GreetingPlugin
 
-greeting {
-    message = 'Hi'
-    greeter = 'Gradle'
+
+dependencies {
+  compile 'org.scala-lang:scala-library:2.10.4'
+  compile group: 'com.typesafe.play', name: 'play_2.10', version: '2.3.2'
+  compile group: 'com.typesafe.play', name: 'routes-compiler_2.10', version: '2.3.2'
+  compile 'com.fasterxml.jackson.core:jackson-databind:2.3.2'
+  compile group: 'com.typesafe.play', name: 'play-iteratees_2.10', version: '2.3.2'
+  //compile group: 'com.typesafe.play', name: 'play-json_2.10', version: '2.3.2'
+  compile group: 'com.typesafe.play', name: 'twirl-compiler_2.10', version: '1.0.2'
+  compile group: 'com.typesafe.play', name: 'twirl-api_2.10', version: '1.0.2'
 }
+
 
 buildscript {
-    repositories {
-        mavenCentral()
-        ivy {
-          url "http://repo.typesafe.com/typesafe/releases/"
-          layout "maven"
-        }
+  repositories {
+    mavenCentral()
+    ivy {
+      url "http://repo.typesafe.com/typesafe/releases/"
+      layout "maven"
     }
-
-    dependencies {
-        classpath group: 'com.typesafe.play', name: 'play_2.10', version: '2.3.2'
-        classpath group: 'com.typesafe.play', name: 'play-json_2.10', version: '2.3.2'
-        classpath group: 'com.typesafe.play', name: 'twirl-compiler_2.10', version: '1.0.2'
-      //classpath files("./java-overlay.jar")
-    }
+  }
+  
+  dependencies {
+    classpath "commons-io:commons-io:2.0.1"
+    classpath group: 'com.typesafe.play', name: 'play_2.10', version: '2.3.2'
+    classpath 'com.fasterxml.jackson.core:jackson-databind:2.3.2'
+    classpath group: 'com.typesafe.play', name: 'play-json_2.10', version: '2.3.2'
+    classpath group: 'com.typesafe.play', name: 'routes-compiler_2.10', version: '2.3.2'
+    classpath group: 'com.typesafe.play', name: 'twirl-compiler_2.10', version: '1.0.2'
+    classpath group: 'com.typesafe.play', name: 'twirl-api_2.10', version: '1.0.2'
+    classpath files("./groovy-bridge.jar") //silly, but I am just playing around! :) this would be a java project were we do not really need this.. :)
+  }
 }
 
-class GreetingPlugin implements Plugin<Project> {
-    void apply(Project project) {
-      //compy.TwirlCompiler compy = new compy.TwirlCompiler(new File("./app/views/index.scala.html"), new File("./app/views"), new File("supadupa"), "html", "", "utf-8", false, false)
-      
-      Project.extensions.create("greeting", GreetingPluginExtension)
-      project.task('hello') << {
-        println "${compy.test()} ${project.greeting.message} from ${project.greeting.greeter}"
-      }
-    }
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.useAnt = false
 }
 
-class GreetingPluginExtension {
-    String message
-    String greeter
+
+//def playScalaCompile = project.tasks.create('playScalaCompile', ScalaCompile)
+//playScalaCompile.classpath = tasks.compileScala.classpath
+//playScalaCompile.destinationDir = tasks.compileScala.destinationDir
+
+//
+task playGenerateTemplates {
+  File outputDir = new File("managed-src") //TODO:properties
+
+  //TODO: somewhere else:
+  tasks.compileScala.source = ["./app/controllers/Application.java", "./managed-src/routes_reverseRouting.scala", "./managed-src/routes_routing.scala", "./managed-src/controllers/routes.java", "./managed-src/views/html/index.template.scala", "./managed-src/views/html/main.template.scala"]
+  
+  println tasks.compileScala.getSource().files
+  //  tasks.compileScala.excludes = "*.html"
+
+  //  sourceSets.main.scala.srcDirs += outputDir.getPath()
+  //  sourceSets.main.java.srcDirs += outputDir.getPath()
+  String additionalImports = "import controllers._"
+  String basePath = (new File(".")).getCanonicalPath()
+  for (templateFile in fileTree("./app/views/").files) { //TODO: {html,js,text,...}.scala name filter
+    File relativeFile = new File("./" + templateFile.getAbsolutePath().replace(basePath, "") + "/")
+    compy.TwirlCompiler twirlCompiler = new compy.TwirlCompiler(relativeFile, new File("./app/"), outputDir, "play.twirl.api.HtmlFormat", additionalImports, "utf-8", false, false)
+    println twirlCompiler.execute()
+  }
+  //scala.Option<File> f = compy.execute()
+  //scalaCompile.source = files('supadupa/html/index.template.scala')
+  //  println "->${f}"
+  sourceSets.main.scala.srcDirs += outputDir.getPath()
 }
+
+//
+
+//def playJavaCompile = project.tasks.create('playJavaCompile', JavaCompile)
+//playJavaCompile.classpath = tasks.compileJava.classpath
+//playJavaCompile.destinationDir = tasks.compileJava.destinationDir
+
+
+
+task playRoutes { //TODO rename?
+  File outputDir = new File("managed-src")
+  String basePath = (new File(".")).getCanonicalPath()
+  tasks.compileScala.source = ["./app/controllers/Application.java", "./managed-src/routes_reverseRouting.scala", "./managed-src/routes_routing.scala", "./managed-src/controllers/routes.java", "./managed-src/views/html/index.template.scala", "./managed-src/views/html/main.template.scala"]
+
+  //tasks.compileScala.source = [file("app"), outputDir]
+  //tasks.compileScala.includes = ["*.scala", "*.java"]
+  //tasks.compileScala.exclude("*.html")
+
+  //sourceSets.main.scala.srcDirs += outputDir.getPath()
+  //sourceSets.main.java.srcDirs += outputDir.getPath()
+  java.util.List<String> additionalImports = new java.util.ArrayList<String>()
+  //  (file: File, generatedDir: File, additionalImports: Seq[String], generateReverseRouter: Boolean = true, generateRefReverseRouter: Boolean = true, namespaceReverseRouter: Boolean = false)
+  compy.RoutesCompiler routesCompiler = new compy.RoutesCompiler(file("conf/routes"), outputDir, additionalImports, true, true, true)
+  routesCompiler.execute()
+}
+
+//playJavaCompile.source = files('routes-managed-src')
+
+  //  playScalaCompile.scalaCompileOptions.incrementalOptions.analysisFile = tasks.compileScala.scalaCompileOptions.incrementalOptions.analysisFile
+
+
+//HELP!
+//playScalaCompile.dependsOn(playRoutes)
+//playScalaCompile.dependsOn(playGenerateTemplates)
+
+project.gradle.projectsEvaluated { //why? (docs say we should do this?)
+  tasks.compileScala.dependsOn(playRoutes)
+  tasks.compileScala.dependsOn(playGenerateTemplates)
+}
+
+//Fails on circular dep, but we must do this because java depends on scala, but routes, views generate scala and java depends on this. Potential solution: create a seperate routes/views scala and java, since there are Java files as well, compilers for playRoutes/playGenerateTemplates?
+
