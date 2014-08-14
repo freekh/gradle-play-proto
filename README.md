@@ -5,10 +5,10 @@ NOTE: Error reporting is not properly implemented so you have to check the comma
 # Running
 Run (you can change the source and hit reload in the browser, but you need to check the command line output to see errors):
 
-    `./gradlew play-run`
+    ./gradlew play-run
 
 # Building 
 Build templates and routes and compile them (and the source code):
 
-    `./gradlew build`
+    ./gradlew build
 
