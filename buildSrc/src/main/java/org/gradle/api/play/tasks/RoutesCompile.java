@@ -1,5 +1,6 @@
 package org.gradle.api.play.tasks;
 
+import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.*;
 import play.router.RoutesCompiler$;
 import scala.collection.Seq;
@@ -9,7 +10,7 @@ import scala.io.Codec;
 import java.io.File;
 import java.util.List;
 
-public class RoutesCompile extends SourceTask {
+public class RoutesCompile extends DefaultTask {
     private List<File> inputFiles;
     private File generatedDirectory;
     private List<String> additionalImports;
