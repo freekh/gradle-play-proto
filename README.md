@@ -1,8 +1,14 @@
-A prototype that builds and reloads a Play application without sbt
+A prototype that builds and reloads a Play application with Gradle (without sbt)
+
+NOTE: Error reporting is not properly implemented so you have to check the command line out put for errors
 
 # Running
-1. Build first (because error reporting is not properly implmeneted) in the router:
-`./gradlew build`
-2. Run (you can change the source and hit reload in the browser, but you need to check the command line output to see the error):
-`./gradlew play-run`
+Run (you can change the source and hit reload in the browser, but you need to check the command line output to see errors):
+
+    `./gradlew play-run`
+
+# Building 
+Build templates and routes and compile them (and the source code):
+
+    `./gradlew build`
 
